@@ -1,0 +1,258 @@
+<html>
+
+<head>
+  <title>hackathon</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    .block {
+      width: 700px;
+      height: 400px;
+
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    #stopwatch {
+      text-align: center;
+      font-size: 12px;
+      margin-left: 120px;
+    }
+
+    .rikkei {
+      margin-left: 80px;
+      font-size: 32px;
+
+    }
+
+    #time {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .title {
+      display: flex;
+      height: 120px;
+      background-color: red;
+      color: white;
+    }
+
+    #score-list {
+      display: none;
+    }
+
+    #player-form {
+      min-height: 100px;
+      background-color: red;
+    }
+
+    #player-name {
+      width: 570px;
+      height: 60px;
+      margin-top: 22px;
+      background-color: brown;
+      color: white;
+    }
+
+    #submit {
+      width: 120px;
+      height: 50px;
+    }
+
+    #stop {
+      display: none;
+    }
+
+    button {
+      margin-right: 0px;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div class="block">
+    <div class="title">
+
+      <div id="scoreboard">
+        <ul id="score-list">
+          <!-- Bảng điểm+tổng số người chơi -->
+        </ul>
+        <p>Players: <span id="total-players">0</span></p>
+        <p>Total Points: <span id="total-points">0</span></p>
+      </div>
+      <h1 class="rikkei">Rikkei Scoreboard</h1>
+      <div id="stopwatch">
+        <h2>Stopwatch</h2>
+        <p id="time">0</p>
+        <button id="start">start</button>
+        <button id="reset">reset</button>
+      </div>
+    </div>
+    <div id="player-list">
+      <ul id="list">
+        <!-- Hứng danh sách người chơi  -->
+      </ul>
+    </div>
+    <form id="player-form">
+      <input type="text" id="player-name" placeholder="Enter a player's name">
+      <button type="submit" id="submit"><strong>ADD PLAYER</strong></button>
+    </form>
+  </div>
+
+  <script>
+    // Lấy danh sách người chơi từ local storage
+    let players = JSON.parse(localStorage.getItem('players')) || [];
+
+    // Lấy thời gian đã trôi qua từ local storage
+    let elapsedTime = JSON.parse(localStorage.getItem('elapsedTime')) || 0;
+
+
+    // Render danh sách người chơi
+    function renderPlayers() {
+      let listElement = document.getElementById('list');
+      listElement.innerHTML = '';
+
+      players.forEach(function (player) {
+        let decreaseButton = document.createElement('button');
+        decreaseButton.textContent = '-';
+        decreaseButton.addEventListener('click', function () {
+          decreasePoints(player);
+        });
+
+        let increaseButton = document.createElement('button');
+        increaseButton.textContent = '+';
+        increaseButton.addEventListener('click', function () {
+          increasePoints(player);
+        });
+        let listItem = document.createElement('li');
+        listItem.textContent = ` ${player.name} : ***** Điểm :  ${player.points}`;
+
+        let deleteButton = document.createElement('button');
+        deleteButton.textContent = 'X';
+        deleteButton.addEventListener('click', function () {
+          deletePlayer(player);
+        });
+
+        listItem.appendChild(increaseButton);
+        listItem.appendChild(decreaseButton);
+        listItem.appendChild(deleteButton);
+        listElement.appendChild(listItem);
+      });
+    }
+
+    // bảng điểm
+    function renderScoreboard() {
+      let scoreListElement = document.getElementById('score-list');
+      scoreListElement.innerHTML = '';
+
+      players.forEach(function (player) {
+        let scoreItem = document.createElement('li');
+        scoreItem.textContent = player.name + ' Điểm: ' + player.points;
+        scoreListElement.appendChild(scoreItem);
+      });
+      let totalPlayersElement = document.getElementById('total-players');
+      totalPlayersElement.textContent = players.length;
+      let totalPointsElement = document.getElementById('total-points');
+      let totalPoints = players.reduce(function (total, player) {
+        return total + player.points;
+      }, 0);
+      totalPointsElement.textContent = totalPoints;
+    }
+
+    // Thêm người chơi mới
+    function addPlayer(event) {
+      event.preventDefault();
+
+      let playerName = document.getElementById('player-name').value;
+      if (playerName) {
+        let newPlayer = {
+          name: playerName,
+          points: 0
+        };
+
+        players.push(newPlayer);
+        localStorage.setItem('players', JSON.stringify(players));
+        document.getElementById('player-name').value = '';
+        renderPlayers();
+        renderScoreboard();
+      }
+    }
+
+    // Tăng điểm của người chơi
+    function increasePoints(player) {
+      player.points++;
+      localStorage.setItem('players', JSON.stringify(players));
+      renderPlayers();
+      renderScoreboard();
+    }
+
+    // Giảm điểm của người chơi
+    function decreasePoints(player) {
+      if (player.points > 0) {
+        player.points--;
+        localStorage.setItem('players', JSON.stringify(players));
+        renderPlayers();
+        renderScoreboard();
+      }
+    }
+
+    // Xóa người chơi
+    function deletePlayer(player) {
+      let playerIndex = players.indexOf(player);
+      if (playerIndex !== -1) {
+        players.splice(playerIndex, 1);
+        localStorage.setItem('players', JSON.stringify(players));
+        renderPlayers();
+        renderScoreboard();
+      }
+    }
+    // Đồng hồ bấm giờ
+    let timerInterval;
+    let timerRunning = false;
+    let timeElement = document.getElementById('time');
+
+    // Bắt đầu đồng hồ.
+    function startTimer() {
+      if (!timerRunning) {
+        let startTime = Date.now() - elapsedTime;
+        timerInterval = setInterval(function () {
+          let currentTime = Date.now();
+          elapsedTime = currentTime - startTime;
+          timeElement.textContent = formatTime(elapsedTime);
+          localStorage.setItem('elapsedTime', JSON.stringify(elapsedTime));
+        }, 1000);
+        timerRunning = true;
+      }
+    }
+    // reset đồng hồ.
+    function resetTimer() {
+      if (timerRunning) {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        elapsedTime = 0;
+        timeElement.textContent = formatTime(elapsedTime);
+        localStorage.setItem('elapsedTime', JSON.stringify(elapsedTime));
+      }
+    }
+    // Định dạng thời gian:giây
+    function formatTime(milliseconds) {
+      let seconds = Math.floor(milliseconds / 1000);
+      return seconds;
+    }
+    // Gắn sự kiện.
+    document.getElementById('player-form').addEventListener('submit', addPlayer);
+    document.getElementById('start').addEventListener('click', startTimer);
+    document.getElementById('reset').addEventListener('click', resetTimer);
+
+    // Render danh sách người chơi và bảng điểm ban đầu
+    renderPlayers()
+    renderScoreboard()
+  </script>
+</body>
+
+</html>
